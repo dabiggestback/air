@@ -60,6 +60,50 @@ body {
   from { transform: scale(0.7); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
 }
+
+  .map {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  height: 180px;
+  background: radial-gradient(circle at center, #111 0%, #000 70%);
+  overflow: hidden;
+  opacity: 0.9;
+}
+
+.route-line {
+  position: absolute;
+  top: 50%;
+  left: 10%;
+  width: 80%;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(255,255,255,0.4),
+    transparent
+  );
+}
+
+.plane {
+  position: absolute;
+  top: 50%;
+  font-size: 22px;
+  transform: translate(-50%, -50%);
+  animation: fly 12s linear infinite;
+  opacity: 0.9;
+}
+
+@keyframes fly {
+  from { left: 10%; }
+  to   { left: 90%; }
+}
+
+@keyframes flyReverse {
+  from { left: 90%; }
+  to   { left: 10%; }
+}
+
 </style>
 </head>
 
@@ -96,24 +140,37 @@ function showFlight() {
   card.offsetHeight;
   card.style.animation = null;
 
-  document.getElementById("city").textContent =
-    f.arrival.airport;
-
-  document.getElementById("route").textContent =
-    `${f.departure.airport} → ${f.arrival.airport}`;
-
+  // BIG flight number
   document.getElementById("flight").textContent =
-    `${f.airline.name} ${f.flight.iata}`;
+    f.flight.iata || "—";
+
+  // Route text
+  document.getElementById("city").textContent =
+    `${f.departure.airport} → ${f.arrival.airport}`;
 
   document.getElementById("status").textContent =
     `Status: ${f.flight_status.toUpperCase()}`;
 
+  // Airline logo
   const logo = document.getElementById("logo");
   if (f.airline.iata) {
     logo.src = `https://content.airhex.com/content/logos/airlines_${f.airline.iata}_200_200_s.png`;
     logo.style.display = "block";
   } else {
     logo.style.display = "none";
+  }
+
+  // Animate plane direction (arrival vs departure)
+  const plane = document.querySelector(".plane");
+  plane.style.animation = "none";
+  plane.offsetHeight;
+
+  if (f.arrival.iata === "CLT") {
+    plane.style.transform = "translate(-50%, -50%) rotate(0deg)";
+    plane.style.animation = "fly 12s linear infinite";
+  } else {
+    plane.style.transform = "translate(-50%, -50%) rotate(180deg)";
+    plane.style.animation = "flyReverse 12s linear infinite";
   }
 }
 
@@ -122,8 +179,14 @@ setInterval(fetchFlights, 10 * 60 * 1000); // API refresh
 setInterval(showFlight, 8 * 1000);         // rotate display
 </script>
 
+<div class="map">
+  <div class="route-line"></div>
+  <div class="plane">✈︎</div>
+</div>
+  
 </body>
 </html>
+
 
 
 
