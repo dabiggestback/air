@@ -2,8 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Flight Display</title>
+<title>CLT Flight Display</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <style>
 body {
   margin: 0;
@@ -14,73 +15,113 @@ body {
   justify-content: center;
   align-items: center;
   height: 100vh;
+  overflow: hidden;
 }
 
 .card {
   text-align: center;
+  animation: fadeIn 0.8s ease;
+}
+
+.logo {
+  width: 90px;
+  height: 90px;
+  margin: 0 auto 20px;
+  animation: pop 0.6s ease;
 }
 
 .city {
-  font-size: 48px;
+  font-size: 46px;
   font-weight: 600;
 }
 
-.sub {
-  opacity: 0.7;
-  margin-top: 8px;
+.route {
+  opacity: 0.6;
+  margin-top: 6px;
 }
 
-.airline {
-  margin-top: 30px;
+.flight {
+  margin-top: 24px;
   font-size: 20px;
-  opacity: 0.8;
 }
 
 .status {
-  margin-top: 10px;
-  font-size: 16px;
-  color: #7fd1ff;
+  margin-top: 8px;
+  font-size: 14px;
+  color: #4fd1ff;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pop {
+  from { transform: scale(0.7); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
 }
 </style>
 </head>
+
 <body>
 
-<div class="card">
-  <div class="city" id="route">Loading…</div>
-  <div class="sub" id="flight"></div>
-  <div class="airline" id="airline"></div>
+<div class="card" id="card">
+  <img id="logo" class="logo" />
+  <div class="city" id="city">Loading…</div>
+  <div class="route" id="route"></div>
+  <div class="flight" id="flight"></div>
   <div class="status" id="status"></div>
 </div>
 
 <script>
 const API_KEY = "e381429a76ea7eac1fb838b22e66e3c4";
+let flights = [];
+let index = 0;
 
-async function loadFlight() {
-  const url = `https://api.aviationstack.com/v1/flights?access_key=${API_KEY}&flight_status=active&limit=1`;
-
+async function fetchFlights() {
+  const url = `https://api.aviationstack.com/v1/flights?access_key=${API_KEY}&arr_iata=CLT&flight_status=active&limit=10`;
   const res = await fetch(url);
   const data = await res.json();
+  flights = data.data || [];
+}
 
-  if (!data.data || data.data.length === 0) return;
+function showFlight() {
+  if (flights.length === 0) return;
 
-  const f = data.data[0];
+  const f = flights[index % flights.length];
+  index++;
+
+  const card = document.getElementById("card");
+  card.style.animation = "none";
+  card.offsetHeight;
+  card.style.animation = null;
+
+  document.getElementById("city").textContent =
+    f.arrival.airport;
 
   document.getElementById("route").textContent =
-    `${f.arrival.airport}`;
-
-  document.getElementById("flight").textContent =
     `${f.departure.airport} → ${f.arrival.airport}`;
 
-  document.getElementById("airline").textContent =
+  document.getElementById("flight").textContent =
     `${f.airline.name} ${f.flight.iata}`;
 
   document.getElementById("status").textContent =
     `Status: ${f.flight_status.toUpperCase()}`;
+
+  const logo = document.getElementById("logo");
+  if (f.airline.iata) {
+    logo.src = `https://content.airhex.com/content/logos/airlines_${f.airline.iata}_200_200_s.png`;
+    logo.style.display = "block";
+  } else {
+    logo.style.display = "none";
+  }
 }
 
-loadFlight();
-setInterval(loadFlight, 5 * 60 * 1000); // every 5 minutes
+fetchFlights();
+setInterval(fetchFlights, 10 * 60 * 1000); // API refresh
+setInterval(showFlight, 8 * 1000);         // rotate display
 </script>
 
 </body>
 </html>
+
