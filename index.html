@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Flight Display</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body {
+  margin: 0;
+  background: black;
+  color: white;
+  font-family: system-ui, -apple-system, sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+.card {
+  text-align: center;
+}
+
+.city {
+  font-size: 48px;
+  font-weight: 600;
+}
+
+.sub {
+  opacity: 0.7;
+  margin-top: 8px;
+}
+
+.airline {
+  margin-top: 30px;
+  font-size: 20px;
+  opacity: 0.8;
+}
+
+.status {
+  margin-top: 10px;
+  font-size: 16px;
+  color: #7fd1ff;
+}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="city" id="route">Loading…</div>
+  <div class="sub" id="flight"></div>
+  <div class="airline" id="airline"></div>
+  <div class="status" id="status"></div>
+</div>
+
+<script>
+const API_KEY = "e381429a76ea7eac1fb838b22e66e3c4";
+
+async function loadFlight() {
+  const url = `https://api.aviationstack.com/v1/flights?access_key=${API_KEY}&flight_status=active&limit=1`;
+
+  const res = await fetch(url);
+  const data = await res.json();
+
+  if (!data.data || data.data.length === 0) return;
+
+  const f = data.data[0];
+
+  document.getElementById("route").textContent =
+    `${f.arrival.airport}`;
+
+  document.getElementById("flight").textContent =
+    `${f.departure.airport} → ${f.arrival.airport}`;
+
+  document.getElementById("airline").textContent =
+    `${f.airline.name} ${f.flight.iata}`;
+
+  document.getElementById("status").textContent =
+    `Status: ${f.flight_status.toUpperCase()}`;
+}
+
+loadFlight();
+setInterval(loadFlight, 5 * 60 * 1000); // every 5 minutes
+</script>
+
+</body>
+</html>
