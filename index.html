@@ -13,22 +13,19 @@ body {
   font-family: system-ui, -apple-system, sans-serif;
   height: 100vh;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
 }
 
 .card {
+  position: absolute;
+  top: 40px;
+  width: 100%;
   text-align: center;
-  padding-top: 40px;
 }
 
 .logo {
   width: 90px;
   height: 90px;
   margin-bottom: 20px;
-  animation: pop 0.6s ease;
 }
 
 .flight {
@@ -56,36 +53,6 @@ body {
   height: 220px;
   background: radial-gradient(circle at center, #111 0%, #000 70%);
 }
-
-.map-svg {
-  width: 100%;
-  height: 100%;
-}
-
-#routePath {
-  stroke-dasharray: 6 10;
-  animation: dash 4s linear infinite;
-}
-
-#planeIcon {
-  dominant-baseline: middle;
-  text-anchor: middle;
-  animation: movePlane 12s linear infinite;
-}
-
-@keyframes dash {
-  to { stroke-dashoffset: -32; }
-}
-
-@keyframes movePlane {
-  from { offset-distance: 0%; }
-  to   { offset-distance: 100%; }
-}
-
-@keyframes pop {
-  from { transform: scale(0.8); opacity: 0; }
-  to   { transform: scale(1); opacity: 1; }
-}
 </style>
 </head>
 
@@ -99,30 +66,40 @@ body {
 </div>
 
 <div class="map">
-  <svg class="map-svg" viewBox="0 0 1000 300">
+  <svg viewBox="0 0 1000 300" width="100%" height="100%">
     <path id="routePath"
           d="M100 200 Q500 50 900 200"
           fill="none"
           stroke="rgba(255,255,255,0.35)"
           stroke-width="2"
-          style="offset-path: path('M100 200 Q500 50 900 200');"/>
-    <text id="planeIcon" font-size="22">✈︎</text>
+          stroke-dasharray="6 10"/>
+
+    <text id="planeIcon" font-size="22">✈︎
+      <animateMotion
+        dur="12s"
+        repeatCount="indefinite"
+        path="M100 200 Q500 50 900 200"/>
+    </text>
   </svg>
 </div>
 
 <script>
-const API_KEY = "e381429a76ea7eac1fb838b22e66e3c4";
+const API_KEY = "YOUR_API_KEY_HERE";
 let flights = [];
 let index = 0;
 
 async function fetchFlights() {
-  const url =
-    `https://api.aviationstack.com/v1/flights?access_key=${API_KEY}` +
-    `&arr_iata=CLT&flight_status=active&limit=10`;
+  try {
+    const url =
+      `https://api.aviationstack.com/v1/flights?access_key=${API_KEY}` +
+      `&arr_iata=CLT&flight_status=active&limit=10`;
 
-  const res = await fetch(url);
-  const data = await res.json();
-  flights = data.data || [];
+    const res = await fetch(url);
+    const data = await res.json();
+    flights = data.data || [];
+  } catch (e) {
+    console.error("API error", e);
+  }
 }
 
 function showFlight() {
@@ -153,22 +130,27 @@ function showFlight() {
 }
 
 function updateTrackerDirection(isArrival) {
-  const path = document.getElementById("routePath");
-  const plane = document.getElementById("planeIcon");
+  const svg = document.querySelector("svg");
+  svg.innerHTML = `
+    <path
+      d="${isArrival
+        ? "M100 200 Q500 50 900 200"
+        : "M900 200 Q500 50 100 200"}"
+      fill="none"
+      stroke="rgba(255,255,255,0.35)"
+      stroke-width="2"
+      stroke-dasharray="6 10"/>
 
-  plane.style.animation = "none";
-  plane.offsetHeight;
-
-  if (isArrival) {
-    path.setAttribute("d", "M100 200 Q500 50 900 200");
-    plane.style.transform = "rotate(0deg)";
-  } else {
-    path.setAttribute("d", "M900 200 Q500 50 100 200");
-    plane.style.transform = "rotate(180deg)";
-  }
-
-  path.style.offsetPath = `path('${path.getAttribute("d")}')`;
-  plane.style.animation = "movePlane 12s linear infinite";
+    <text font-size="22" transform="rotate(${isArrival ? 0 : 180})">
+      ✈︎
+      <animateMotion
+        dur="12s"
+        repeatCount="indefinite"
+        path="${isArrival
+          ? "M100 200 Q500 50 900 200"
+          : "M900 200 Q500 50 100 200"}"/>
+    </text>
+  `;
 }
 
 fetchFlights();
@@ -178,6 +160,8 @@ setInterval(showFlight, 8 * 1000);
 
 </body>
 </html>
+
+
 
 
 
