@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>CLT Flight Tracker</title>
+<title>CLT Flight Display</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
@@ -11,33 +11,38 @@ body {
   background: black;
   color: white;
   font-family: system-ui, -apple-system, sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   height: 100vh;
   overflow: hidden;
 }
 
 .card {
-  position: absolute;
-  top: 40px;
-  width: 100%;
   text-align: center;
+  animation: fadeIn 0.8s ease;
 }
 
 .logo {
   width: 90px;
   height: 90px;
-  margin-bottom: 20px;
+  margin: 0 auto 20px;
+  animation: pop 0.6s ease;
 }
 
-.flight {
-  font-size: 54px;
+.city {
+  font-size: 46px;
   font-weight: 600;
-  letter-spacing: 2px;
 }
 
 .route {
-  margin-top: 10px;
+  opacity: 0.6;
+  margin-top: 6px;
+}
+
+.flight {
+  margin-top: 24px;
   font-size: 20px;
-  opacity: 0.7;
 }
 
 .status {
@@ -46,60 +51,38 @@ body {
   color: #4fd1ff;
 }
 
-.map {
-  position: absolute;
-  bottom: 0;
-  width: 100%;
-  height: 220px;
-  background: radial-gradient(circle at center, #111 0%, #000 70%);
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pop {
+  from { transform: scale(0.7); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
 }
 </style>
 </head>
 
 <body>
 
-<div class="card">
+<div class="card" id="card">
   <img id="logo" class="logo" />
-  <div class="flight" id="flight">—</div>
+  <div class="city" id="city">Loading…</div>
   <div class="route" id="route"></div>
+  <div class="flight" id="flight"></div>
   <div class="status" id="status"></div>
 </div>
 
-<div class="map">
-  <svg viewBox="0 0 1000 300" width="100%" height="100%">
-    <path id="routePath"
-          d="M100 200 Q500 50 900 200"
-          fill="none"
-          stroke="rgba(255,255,255,0.35)"
-          stroke-width="2"
-          stroke-dasharray="6 10"/>
-
-    <text id="planeIcon" font-size="22">✈︎
-      <animateMotion
-        dur="12s"
-        repeatCount="indefinite"
-        path="M100 200 Q500 50 900 200"/>
-    </text>
-  </svg>
-</div>
-
 <script>
-const API_KEY = "e381429a76ea7eac1fb838b22e66e3c4";
+const API_KEY = "YOUR_API_KEY_HERE";
 let flights = [];
 let index = 0;
 
 async function fetchFlights() {
-  try {
-    const url =
-      `https://api.aviationstack.com/v1/flights?access_key=${API_KEY}` +
-      `&arr_iata=CLT&flight_status=active&limit=10`;
-
-    const res = await fetch(url);
-    const data = await res.json();
-    flights = data.data || [];
-  } catch (e) {
-    console.error("API error", e);
-  }
+  const url = `https://api.aviationstack.com/v1/flights?access_key=${API_KEY}&arr_iata=CLT&flight_status=active&limit=10`;
+  const res = await fetch(url);
+  const data = await res.json();
+  flights = data.data || [];
 }
 
 function showFlight() {
@@ -108,58 +91,41 @@ function showFlight() {
   const f = flights[index % flights.length];
   index++;
 
-  document.getElementById("flight").textContent =
-    f.flight.iata || "—";
+  const card = document.getElementById("card");
+  card.style.animation = "none";
+  card.offsetHeight;
+  card.style.animation = null;
+
+  document.getElementById("city").textContent =
+    f.arrival.airport;
 
   document.getElementById("route").textContent =
     `${f.departure.airport} → ${f.arrival.airport}`;
+
+  document.getElementById("flight").textContent =
+    `${f.airline.name} ${f.flight.iata}`;
 
   document.getElementById("status").textContent =
     `Status: ${f.flight_status.toUpperCase()}`;
 
   const logo = document.getElementById("logo");
   if (f.airline.iata) {
-    logo.src =
-      `https://content.airhex.com/content/logos/airlines_${f.airline.iata}_200_200_s.png`;
+    logo.src = `https://content.airhex.com/content/logos/airlines_${f.airline.iata}_200_200_s.png`;
     logo.style.display = "block";
   } else {
     logo.style.display = "none";
   }
-
-  updateTrackerDirection(f.arrival.iata === "CLT");
-}
-
-function updateTrackerDirection(isArrival) {
-  const svg = document.querySelector("svg");
-  svg.innerHTML = `
-    <path
-      d="${isArrival
-        ? "M100 200 Q500 50 900 200"
-        : "M900 200 Q500 50 100 200"}"
-      fill="none"
-      stroke="rgba(255,255,255,0.35)"
-      stroke-width="2"
-      stroke-dasharray="6 10"/>
-
-    <text font-size="22" transform="rotate(${isArrival ? 0 : 180})">
-      ✈︎
-      <animateMotion
-        dur="12s"
-        repeatCount="indefinite"
-        path="${isArrival
-          ? "M100 200 Q500 50 900 200"
-          : "M900 200 Q500 50 100 200"}"/>
-    </text>
-  `;
 }
 
 fetchFlights();
-setInterval(fetchFlights, 10 * 60 * 1000);
-setInterval(showFlight, 8 * 1000);
+setInterval(fetchFlights, 10 * 60 * 1000); // API refresh
+setInterval(showFlight, 8 * 1000);         // rotate display
 </script>
 
 </body>
 </html>
+
+
 
 
 
