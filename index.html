@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>CLT Flight Display</title>
+<title>CLT Flight Tracker</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
@@ -11,38 +11,36 @@ body {
   background: black;
   color: white;
   font-family: system-ui, -apple-system, sans-serif;
-  display: flex;
-  justify-content: center;
-  align-items: center;
   height: 100vh;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 .card {
   text-align: center;
-  animation: fadeIn 0.8s ease;
+  padding-top: 40px;
 }
 
 .logo {
   width: 90px;
   height: 90px;
-  margin: 0 auto 20px;
+  margin-bottom: 20px;
   animation: pop 0.6s ease;
 }
 
-.city {
-  font-size: 20px;
+.flight {
+  font-size: 54px;
   font-weight: 600;
+  letter-spacing: 2px;
 }
 
 .route {
-  opacity: 0.6;
-  margin-top: 6px;
-}
-
-.flight {
-  margin-top: 24px;
-  font-size: 40px;
+  margin-top: 10px;
+  font-size: 20px;
+  opacity: 0.7;
 }
 
 .status {
@@ -51,70 +49,65 @@ body {
   color: #4fd1ff;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes pop {
-  from { transform: scale(0.7); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
-}
-
-  .map {
+.map {
   position: absolute;
   bottom: 0;
   width: 100%;
-  height: 180px;
+  height: 220px;
   background: radial-gradient(circle at center, #111 0%, #000 70%);
-  overflow: hidden;
-  opacity: 0.9;
 }
 
-.route-line {
-  position: absolute;
-  top: 50%;
-  left: 10%;
-  width: 80%;
-  height: 1px;
-  background: linear-gradient(
-    to right,
-    transparent,
-    rgba(255,255,255,0.4),
-    transparent
-  );
+.map-svg {
+  width: 100%;
+  height: 100%;
 }
 
-.plane {
-  position: absolute;
-  top: 50%;
-  font-size: 22px;
-  transform: translate(-50%, -50%);
-  animation: fly 12s linear infinite;
-  opacity: 0.9;
+#routePath {
+  stroke-dasharray: 6 10;
+  animation: dash 4s linear infinite;
 }
 
-@keyframes fly {
-  from { left: 10%; }
-  to   { left: 90%; }
+#planeIcon {
+  dominant-baseline: middle;
+  text-anchor: middle;
+  animation: movePlane 12s linear infinite;
 }
 
-@keyframes flyReverse {
-  from { left: 90%; }
-  to   { left: 10%; }
+@keyframes dash {
+  to { stroke-dashoffset: -32; }
 }
 
+@keyframes movePlane {
+  from { offset-distance: 0%; }
+  to   { offset-distance: 100%; }
+}
+
+@keyframes pop {
+  from { transform: scale(0.8); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
 </style>
 </head>
 
 <body>
 
-<div class="card" id="card">
+<div class="card">
   <img id="logo" class="logo" />
-  <div class="flight" id="flight">Loading…</div>
+  <div class="flight" id="flight">—</div>
   <div class="route" id="route"></div>
-  <div class="city" id="city"></div>
   <div class="status" id="status"></div>
+</div>
+
+<div class="map">
+  <svg class="map-svg" viewBox="0 0 1000 300">
+    <path id="routePath"
+          d="M100 200 Q500 50 900 200"
+          fill="none"
+          stroke="rgba(255,255,255,0.35)"
+          stroke-width="2"
+          style="offset-path: path('M100 200 Q500 50 900 200');"/>
+    <text id="planeIcon" font-size="22">✈︎</text>
+  </svg>
 </div>
 
 <script>
@@ -123,7 +116,10 @@ let flights = [];
 let index = 0;
 
 async function fetchFlights() {
-  const url = `https://api.aviationstack.com/v1/flights?access_key=${API_KEY}&arr_iata=CLT&flight_status=active&limit=10`;
+  const url =
+    `https://api.aviationstack.com/v1/flights?access_key=${API_KEY}` +
+    `&arr_iata=CLT&flight_status=active&limit=10`;
+
   const res = await fetch(url);
   const data = await res.json();
   flights = data.data || [];
@@ -135,57 +131,54 @@ function showFlight() {
   const f = flights[index % flights.length];
   index++;
 
-  const card = document.getElementById("card");
-  card.style.animation = "none";
-  card.offsetHeight;
-  card.style.animation = null;
-
-  // BIG flight number
   document.getElementById("flight").textContent =
     f.flight.iata || "—";
 
-  // Route text
-  document.getElementById("city").textContent =
+  document.getElementById("route").textContent =
     `${f.departure.airport} → ${f.arrival.airport}`;
 
   document.getElementById("status").textContent =
     `Status: ${f.flight_status.toUpperCase()}`;
 
-  // Airline logo
   const logo = document.getElementById("logo");
   if (f.airline.iata) {
-    logo.src = `https://content.airhex.com/content/logos/airlines_${f.airline.iata}_200_200_s.png`;
+    logo.src =
+      `https://content.airhex.com/content/logos/airlines_${f.airline.iata}_200_200_s.png`;
     logo.style.display = "block";
   } else {
     logo.style.display = "none";
   }
 
-  // Animate plane direction (arrival vs departure)
-  const plane = document.querySelector(".plane");
+  updateTrackerDirection(f.arrival.iata === "CLT");
+}
+
+function updateTrackerDirection(isArrival) {
+  const path = document.getElementById("routePath");
+  const plane = document.getElementById("planeIcon");
+
   plane.style.animation = "none";
   plane.offsetHeight;
 
-  if (f.arrival.iata === "CLT") {
-    plane.style.transform = "translate(-50%, -50%) rotate(0deg)";
-    plane.style.animation = "fly 12s linear infinite";
+  if (isArrival) {
+    path.setAttribute("d", "M100 200 Q500 50 900 200");
+    plane.style.transform = "rotate(0deg)";
   } else {
-    plane.style.transform = "translate(-50%, -50%) rotate(180deg)";
-    plane.style.animation = "flyReverse 12s linear infinite";
+    path.setAttribute("d", "M900 200 Q500 50 100 200");
+    plane.style.transform = "rotate(180deg)";
   }
+
+  path.style.offsetPath = `path('${path.getAttribute("d")}')`;
+  plane.style.animation = "movePlane 12s linear infinite";
 }
 
 fetchFlights();
-setInterval(fetchFlights, 10 * 60 * 1000); // API refresh
-setInterval(showFlight, 8 * 1000);         // rotate display
+setInterval(fetchFlights, 10 * 60 * 1000);
+setInterval(showFlight, 8 * 1000);
 </script>
 
-<div class="map">
-  <div class="route-line"></div>
-  <div class="plane">✈︎</div>
-</div>
-  
 </body>
 </html>
+
 
 
 
